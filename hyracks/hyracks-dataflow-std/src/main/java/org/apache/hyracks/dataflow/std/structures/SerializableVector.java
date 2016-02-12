@@ -21,11 +21,11 @@
 package org.apache.hyracks.dataflow.std.structures;
 
 
-import org.apache.hyracks.api.context.IHyracksFrameMgrContext;
-import org.apache.hyracks.api.exceptions.HyracksDataException;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+
+import org.apache.hyracks.api.context.IHyracksFrameMgrContext;
+import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class SerializableVector implements ISerializableVector<IResetableSerializable>{
 
