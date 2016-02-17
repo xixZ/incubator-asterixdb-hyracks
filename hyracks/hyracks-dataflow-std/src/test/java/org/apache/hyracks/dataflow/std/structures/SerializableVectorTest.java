@@ -29,35 +29,47 @@ import static org.junit.Assert.assertEquals;
 public class SerializableVectorTest {
     private FrameManager frameManager;
     private final int defaultFrameSize = 128 * 1024;
-    class Pointer implements IResetableSerializable<Pointer> {
-        int i;
-        int j;
-        public Pointer() {
-            i = 0;
-            j = 0;
+    class RecordPointer implements IResetableSerializable<RecordPointer> {
+        int[] nums;
+        public RecordPointer(int size) {   //size must be times of 4
+            nums = new int[size/4];
         }
 
-        public Pointer(int i, int j) {
-            this.i = i;
-            this.j = 1;
+        public RecordPointer(int field1, int field2) {
+            nums = new int[2];
+            nums[0] = field1;
+            nums[1] = field2;
+        }
+        public RecordPointer(int field1, int field2, int field3, int field4){
+            nums = new int[4];
+            nums[0] = field1;
+            nums[1] = field2;
+            nums[2] = field3;
+            nums[3] = field4;
         }
 
+        public void setNums(int index, int value){
+            nums[index] = value;
+        }
+
+        public int getNums(int index){
+            return nums[index];
+        }
         @Override
-        public void reset(Pointer other) {
-            i = other.i;
-            j = other.j;
+        public void reset(RecordPointer other) {
+            nums = other.nums;
         }
 
         @Override
         public void serialize(byte[] bytes, int offset){
-            writeInt(bytes, offset, i);
-            writeInt(bytes, offset + 4, j);
+            for(int i = 0; i < nums.length; i ++) 
+                writeInt(bytes, offset + 4 * i, nums[i]);
         }
 
         @Override
         public void deserialize(byte[] bytes, int offset, int length){
-            i = readInt(bytes, offset);
-            j = readInt(bytes, offset + 4);
+            for(int i = 0; i < nums.length; i ++)
+                nums[i] = readInt(bytes, offset + 4 * i);
         }
 
         /**
@@ -79,31 +91,7 @@ public class SerializableVectorTest {
                     + ((bytes[offset + 3] & 0xff) << 0);
         }
     }
-
-    /**
-     * A pointer of size 16
-     */
-    class Pointer16 extends Pointer{
-        int m, n;
-        public Pointer16(int i, int j, int m, int n){
-            this.i = i; this.j = j; this.m = m; this.n = n;
-        }
-        @Override
-        public void serialize(byte[] bytes, int offset){
-            writeInt(bytes, offset, i);
-            writeInt(bytes, offset + 4, j);
-            writeInt(bytes, offset + 8, m);
-            writeInt(bytes, offset + 12, n);
-        }
-
-        @Override
-        public void deserialize(byte[] bytes, int offset, int length){
-            i = readInt(bytes, offset);
-            j = readInt(bytes, offset + 4);
-            m = readInt(bytes, offset + 8);
-            n = readInt(bytes, offset + 12);
-        }
-    }
+    
     @Test
     public void testInit(){
         int recordSize = 8;
@@ -117,10 +105,10 @@ public class SerializableVectorTest {
         frameManager = new FrameManager(frameSize);
         SerializableVector sVector = new SerializableVector(frameManager, recordSize);
         for(int i = 0; i < vSize; i ++){
-            sVector.append(new Pointer(i, i + 2));
+            sVector.append(new RecordPointer(i, i + 2));
             assertEquals(i+1, sVector.size());
         }
-        int frameCount = calculateFrameCount(vSize, frameSize, recordSize);
+        int frameCount = calculateFrameCount(vSize, recordSize, frameSize);
         assertEquals(frameCount, sVector.getFrameCount());
     }
 
@@ -156,27 +144,19 @@ public class SerializableVectorTest {
         int vSize = 1000000;    //1M
         frameManager = new FrameManager(frameSize);
         SerializableVector sVector = new SerializableVector(frameManager, recordSize);
-        if(recordSize == 8) {
-            for (int i = 0; i < vSize; i++) {
-                sVector.append(new Pointer(i, i + 2));
-            }
-
-            Pointer record = new Pointer();
-            for (int i = 0; i < vSize; i++) {
-                sVector.get(i, record);
-                assertEquals(record, new Pointer(i, i + 2));
-            }
+        RecordPointer recordPointer;
+        for(int i = 0; i < vSize; i ++){
+            recordPointer = new RecordPointer(recordSize);
+            for(int j = 0; j < recordSize / 4; j ++)
+                recordPointer.setNums(j, i+j);
+            sVector.append(recordPointer);
         }
-        else if(recordSize == 16){
-            for (int i = 0; i < vSize; i++) {
-                sVector.append(new Pointer16(i, i + 1, i + 2, i + 3));
-            }
 
-            Pointer record = new Pointer();
-            for (int i = 0; i < vSize; i++) {
-                sVector.get(i, record);
-                assertEquals(record, new Pointer16(i, i + 1, i + 2, i + 3));
-            }
+        recordPointer = new RecordPointer(recordSize);
+        for(int i = 0; i < vSize; i ++){
+            sVector.get(i, recordPointer);
+            for(int j = 0; j < recordSize / 4; j ++)
+                assertEquals(i+j, recordPointer.getNums(j));
         }
     }
 
@@ -207,10 +187,10 @@ public class SerializableVectorTest {
         frameManager = new FrameManager(defaultFrameSize);
         SerializableVector sVector = new SerializableVector(frameManager, recordSize);
         for(int i = 0; i < vSize; i ++){
-            sVector.append(new Pointer(i, i + 2));
+            sVector.append(new RecordPointer(i, i + 2));
         }
 
-        Pointer record = new Pointer();
+        RecordPointer record = new RecordPointer(recordSize);
         for(int i = vSize; i < vSize + 100; i ++) {
             sVector.get(vSize, record);
         }
@@ -223,19 +203,23 @@ public class SerializableVectorTest {
         frameManager = new FrameManager(defaultFrameSize);
         SerializableVector sVector = new SerializableVector(frameManager, recordSize);
         for(int i = 0; i < vSize; i ++){
-            sVector.append(new Pointer(i, i + 2));
+            sVector.append(new RecordPointer(i, i + 2));
         }
 
-        Pointer record = new Pointer();
+        RecordPointer record = new RecordPointer(recordSize);
         for(int i = 0; i < vSize; i += 5)
-            sVector.set(i, new Pointer(i + 5, i + 6));
+            sVector.set(i, new RecordPointer(i + 5, i + 6));
 
         for(int i = 0; i < vSize; i ++){
             sVector.get(i, record);
-            if(i % 5 == 0)
-                assertEquals(new Pointer(i + 5, i + 6), record);
-            else
-                assertEquals(new Pointer(i, i + 2), record);
+            if(i % 5 == 0) {
+                assertEquals(i + 5, record.getNums(0));
+                assertEquals(i + 6, record.getNums(1));
+            }
+            else {
+                assertEquals(i, record.getNums(0));
+                assertEquals(i + 2, record.getNums(1));
+            }
         }
 
     }
@@ -247,10 +231,10 @@ public class SerializableVectorTest {
         frameManager = new FrameManager(defaultFrameSize);
         SerializableVector sVector = new SerializableVector(frameManager, recordSize);
         for(int i = 0; i < vSize; i ++){
-            sVector.append(new Pointer(i, i + 2));
+            sVector.append(new RecordPointer(i, i + 2));
         }
 
-        Pointer record = new Pointer();
+        RecordPointer record = new RecordPointer(recordSize);
         for(int i = vSize; i < vSize + 100; i ++) {
             sVector.set(vSize, record);
         }
@@ -263,7 +247,7 @@ public class SerializableVectorTest {
         frameManager = new FrameManager(defaultFrameSize);
         SerializableVector sVector = new SerializableVector(frameManager, recordSize);
         for(int i = 0; i < vSize; i ++){
-            sVector.append(new Pointer(i, i + 2));
+            sVector.append(new RecordPointer(i, i + 2));
         }
 
         sVector.clear();
@@ -271,7 +255,7 @@ public class SerializableVectorTest {
         assertEquals(sVector.getFrameCount(), 0);
 
         for(int i = 0; i < vSize; i ++){
-            sVector.append(new Pointer(i, i + 2));
+            sVector.append(new RecordPointer(i, i + 2));
         }
         sVector.clear();
         assertEquals(sVector.size(), 0);
