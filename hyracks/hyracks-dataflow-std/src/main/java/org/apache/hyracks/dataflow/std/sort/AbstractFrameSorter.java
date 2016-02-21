@@ -38,16 +38,20 @@ import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAccessor;
 import org.apache.hyracks.dataflow.common.comm.io.FrameTupleAppender;
 import org.apache.hyracks.dataflow.common.comm.util.FrameUtils;
 import org.apache.hyracks.dataflow.std.sort.buffermanager.IFrameBufferManager;
+import org.apache.hyracks.dataflow.std.structures.IResetableSerializable;
+import org.apache.hyracks.dataflow.std.structures.SerializableVector;
 
 public abstract class AbstractFrameSorter implements IFrameSorter {
 
     protected Logger LOGGER = Logger.getLogger(AbstractFrameSorter.class.getName());
+
     static final int PTR_SIZE = 4;
+    /**
     static final int ID_FRAMEID = 0;
     static final int ID_TUPLE_START = 1;
     static final int ID_TUPLE_END = 2;
     static final int ID_NORMAL_KEY = 3;
-
+    */
     protected final int[] sortFields;
     protected final IBinaryComparator[] comparators;
     protected final INormalizedKeyComputer nkc;
@@ -57,9 +61,62 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
     protected final IFrame outputFrame;
     protected final int outputLimit;
 
-    protected int[] tPointers;
+   // protected int[] tPointers;
+    protected SerializableVector tPointerVector;
     protected int tupleCount;
 
+    class TPointer implements IResetableSerializable<TPointer>{
+        int id_frameID;
+        int id_tuple_start;
+        int id_tuple_end;
+        int id_normal_key;
+
+        public TPointer(int id_frameID, int id_tuple_start, int id_tuple_end, int id_normal_key){
+            this.id_frameID = id_frameID;
+            this.id_tuple_start = id_tuple_start;
+            this.id_tuple_end = id_tuple_end;
+            this.id_normal_key = id_normal_key;
+        }
+        public TPointer(){}
+        @Override
+        public void reset(TPointer other) {
+            id_frameID = other.id_frameID;
+            id_tuple_start = other.id_tuple_start;
+            id_tuple_end = other.id_tuple_end;
+            id_normal_key = other.id_normal_key;
+        }
+
+        @Override
+        public void serialize(byte[] bytes, int offset){
+            writeInt(bytes, offset, id_frameID);
+            writeInt(bytes, offset + 4, id_tuple_start);
+            writeInt(bytes, offset + 8, id_tuple_end);
+            writeInt(bytes, offset + 12, id_normal_key);
+        }
+
+        @Override
+        public void deserialize(byte[] bytes, int offset, int length){
+            id_frameID = readInt(bytes, offset);
+            id_tuple_start = readInt(bytes, offset + 4);
+            id_tuple_end = readInt(bytes, offset + 8);
+            id_normal_key = readInt(bytes, offset + 12);
+        }
+
+        //write int value to bytes[offset] ~ bytes[offset+3]
+        void writeInt(byte[] bytes, int offset, int value) {
+            int byteIdx = offset;
+            bytes[byteIdx++] = (byte) (value >> 24);
+            bytes[byteIdx++] = (byte) (value >> 16);
+            bytes[byteIdx++] = (byte) (value >> 8);
+            bytes[byteIdx] = (byte) (value);
+        }
+
+        int readInt(byte[] bytes, int offset) {
+            return ((bytes[offset] & 0xff) << 24) + ((bytes[offset + 1] & 0xff) << 16) + ((bytes[offset + 2] & 0xff) << 8)
+                    + ((bytes[offset + 3] & 0xff) << 0);
+        }
+
+    }
     public AbstractFrameSorter(IHyracksTaskContext ctx, IFrameBufferManager bufferManager, int[] sortFields,
             INormalizedKeyComputerFactory firstKeyNormalizerFactory, IBinaryComparatorFactory[] comparatorFactories,
             RecordDescriptor recordDescriptor) throws HyracksDataException {
@@ -82,6 +139,8 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
         this.outputAppender = new FrameTupleAppender();
         this.outputFrame = new VSizeFrame(ctx);
         this.outputLimit = outputLimit;
+
+        this.tPointerVector = new SerializableVector(ctx, 4 * PTR_SIZE);
     }
 
     @Override
@@ -111,9 +170,6 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
                             bufferManager.getFrameSize(i));
             tupleCount += inputTupleAccessor.getTupleCount();
         }
-        if (tPointers == null || tPointers.length < tupleCount * PTR_SIZE) {
-            tPointers = new int[tupleCount * PTR_SIZE];
-        }
         int ptr = 0;
         int sfIdx = sortFields[0];
         for (int i = 0; i < bufferManager.getNumFrames(); ++i) {
@@ -125,14 +181,13 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
             for (int j = 0; j < tCount; ++j) {
                 int tStart = inputTupleAccessor.getTupleStartOffset(j);
                 int tEnd = inputTupleAccessor.getTupleEndOffset(j);
-                tPointers[ptr * PTR_SIZE + ID_FRAMEID] = i;
-                tPointers[ptr * PTR_SIZE + ID_TUPLE_START] = tStart;
-                tPointers[ptr * PTR_SIZE + ID_TUPLE_END] = tEnd;
+
                 int f0StartRel = inputTupleAccessor.getFieldStartOffset(j, sfIdx);
                 int f0EndRel = inputTupleAccessor.getFieldEndOffset(j, sfIdx);
                 int f0Start = f0StartRel + tStart + inputTupleAccessor.getFieldSlotsLength();
-                tPointers[ptr * PTR_SIZE + ID_NORMAL_KEY] =
-                        nkc == null ? 0 : nkc.normalize(array, f0Start, f0EndRel - f0StartRel);
+                int id_normal_key = nkc == null? 0 : nkc.normalize(array, f0Start, f0EndRel - f0StartRel);
+                TPointer tPointer = new TPointer(i, tStart, tEnd, id_normal_key);
+                tPointerVector.append(tPointer);
                 ++ptr;
             }
         }
@@ -159,10 +214,12 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
         int maxFrameSize = outputFrame.getFrameSize();
         int limit = Math.min(tupleCount, outputLimit);
         int io = 0;
+        TPointer tPointer = new TPointer();
         for (int ptr = 0; ptr < limit; ++ptr) {
-            int i = tPointers[ptr * PTR_SIZE + ID_FRAMEID];
-            int tStart = tPointers[ptr * PTR_SIZE + ID_TUPLE_START];
-            int tEnd = tPointers[ptr * PTR_SIZE + ID_TUPLE_END];
+            tPointerVector.get(ptr, tPointer);
+            int i = tPointer.id_frameID;
+            int tStart = tPointer.id_tuple_start;
+            int tEnd = tPointer.id_tuple_end;
             ByteBuffer buffer = bufferManager.getFrame(i);
             inputTupleAccessor.reset(buffer, bufferManager.getFrameStartOffset(i), bufferManager.getFrameSize(i));
 
@@ -185,6 +242,6 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
     public void close() {
         tupleCount = 0;
         bufferManager.close();
-        tPointers = null;
+        tPointerVector.clear();
     }
 }

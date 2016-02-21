@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 import org.apache.hyracks.api.context.IHyracksFrameMgrContext;
+import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
 public class SerializableVector implements ISerializableVector<IResetableSerializable>{
@@ -52,7 +53,6 @@ public class SerializableVector implements ISerializableVector<IResetableSeriali
         lastPos = 0;
     }
 
-
     @Override
     public void get(int index, IResetableSerializable record) {
         if(index >= numOfRecords) {
@@ -78,6 +78,7 @@ public class SerializableVector implements ISerializableVector<IResetableSeriali
         }
         numOfRecords ++;
     }
+
 
     @Override
     public void set(int index, IResetableSerializable record) {
