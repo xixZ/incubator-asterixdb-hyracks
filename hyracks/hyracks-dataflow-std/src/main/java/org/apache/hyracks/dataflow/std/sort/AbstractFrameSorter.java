@@ -46,6 +46,7 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
     protected Logger LOGGER = Logger.getLogger(AbstractFrameSorter.class.getName());
 
     static final int PTR_SIZE = 4;
+    static final int RECORD_SIZE = 16;
     /**
     static final int ID_FRAMEID = 0;
     static final int ID_TUPLE_START = 1;
@@ -62,7 +63,7 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
     protected final int outputLimit;
 
    // protected int[] tPointers;
-    protected SerializableVector tPointerVector;
+    protected SerializableVector tPointerVec;
     protected int tupleCount;
 
     class TPointer implements IResetableSerializable<TPointer>{
@@ -140,7 +141,7 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
         this.outputFrame = new VSizeFrame(ctx);
         this.outputLimit = outputLimit;
 
-        this.tPointerVector = new SerializableVector(ctx, 4 * PTR_SIZE);
+        this.tPointerVec = new SerializableVector(ctx, RECORD_SIZE);
     }
 
     @Override
@@ -187,7 +188,7 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
                 int f0Start = f0StartRel + tStart + inputTupleAccessor.getFieldSlotsLength();
                 int id_normal_key = nkc == null? 0 : nkc.normalize(array, f0Start, f0EndRel - f0StartRel);
                 TPointer tPointer = new TPointer(i, tStart, tEnd, id_normal_key);
-                tPointerVector.append(tPointer);
+                tPointerVec.append(tPointer);
                 ++ptr;
             }
         }
@@ -216,7 +217,7 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
         int io = 0;
         TPointer tPointer = new TPointer();
         for (int ptr = 0; ptr < limit; ++ptr) {
-            tPointerVector.get(ptr, tPointer);
+            tPointerVec.get(ptr, tPointer);
             int i = tPointer.id_frameID;
             int tStart = tPointer.id_tuple_start;
             int tEnd = tPointer.id_tuple_end;
@@ -242,6 +243,6 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
     public void close() {
         tupleCount = 0;
         bufferManager.close();
-        tPointerVector.clear();
+        tPointerVec.clear();
     }
 }

@@ -50,7 +50,7 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
 
     @Override
     void sortTupleReferences() throws HyracksDataException {
-        sort(tPointerVector, 0, tupleCount);
+        sort(tPointerVec, 0, tupleCount);
     }
 
     void sort(SerializableVector tPointerVector, int offset, int length) throws HyracksDataException {
