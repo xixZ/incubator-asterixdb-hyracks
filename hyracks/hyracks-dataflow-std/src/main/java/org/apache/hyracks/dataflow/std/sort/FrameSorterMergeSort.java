@@ -37,8 +37,8 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
     private FrameTupleAccessor fta2;
 
 
-    private TPointer tmp_tPtr1 = new TPointer();
-    private TPointer tmp_tPtr2 = new TPointer();
+    private TPointer tmpTPtr1 = new TPointer();
+    private TPointer tmpTPtr2 = new TPointer();
 
     public FrameSorterMergeSort(IHyracksTaskContext ctx, IFrameBufferManager bufferManager, int[] sortFields,
             INormalizedKeyComputerFactory firstKeyNormalizerFactory, IBinaryComparatorFactory[] comparatorFactories,
@@ -62,7 +62,7 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
             int len = tPointerVec.size();
             tPointerVecTemp.clear();
             for(int i = 0; i < len; i ++){
-                tPointerVecTemp.append(tmp_tPtr1);
+                tPointerVecTemp.append(tmpTPtr1);
             }
         }
         sort(0, tupleCount);
@@ -128,27 +128,27 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
 
     private void sVectorCopy(SerializableVector src, int srcPos, SerializableVector dst, int dstPos, int len){
         for(int i = 0; i < len; i ++){
-            src.get(srcPos + i, tmp_tPtr1);
-            dst.set(dstPos + i, tmp_tPtr1);
+            src.get(srcPos + i, tmpTPtr1);
+            dst.set(dstPos + i, tmpTPtr1);
         }
     }
     //copy tPointerVec[src] to tPointerVecTemp[dest]
     private void copy(int src, int dest) {
-        tPointerVec.get(src, tmp_tPtr1);
-        tPointerVecTemp.set(dest, tmp_tPtr1);
+        tPointerVec.get(src, tmpTPtr);
+        tPointerVecTemp.set(dest, tmpTPtr);
     }
 
-    private int compare(int tp1_index, int tp2_index) throws HyracksDataException {
-        tPointerVec.get(tp1_index, tmp_tPtr1);
-        tPointerVec.get(tp2_index, tmp_tPtr2);
+    private int compare(int tp1Index, int tp2Index) throws HyracksDataException {
+        tPointerVec.get(tp1Index, tmpTPtr1);
+        tPointerVec.get(tp2Index, tmpTPtr2);
 
-        int tp1i = tmp_tPtr1.id_frameID;
-        int tp1j = tmp_tPtr1.id_tuple_start;
-        int tp1v = tmp_tPtr1.id_normal_key;
+        int tp1i = tmpTPtr1.frameID;
+        int tp1j = tmpTPtr1.tupleStart;
+        int tp1v = tmpTPtr1.normalKey;
 
-        int tp2i = tmp_tPtr2.id_frameID;
-        int tp2j = tmp_tPtr2.id_tuple_start;
-        int tp2v = tmp_tPtr2.id_normal_key;
+        int tp2i = tmpTPtr2.frameID;
+        int tp2j = tmpTPtr2.tupleStart;
+        int tp2v = tmpTPtr2.normalKey;
 
         if (tp1v != tp2v) {
             return ((((long) tp1v) & 0xffffffffL) < (((long) tp2v) & 0xffffffffL)) ? -1 : 1;

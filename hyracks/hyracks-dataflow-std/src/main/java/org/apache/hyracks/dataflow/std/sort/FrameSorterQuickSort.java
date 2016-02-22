@@ -33,8 +33,8 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
 
     private FrameTupleAccessor fta2;
 
-    private TPointer tmp_tPtr1 = new TPointer();
-    private TPointer tmp_tPtr2 = new TPointer();
+    private TPointer tmpTPtr1 = new TPointer();
+    private TPointer tmpTPtr2 = new TPointer();
 
     public FrameSorterQuickSort(IHyracksTaskContext ctx, IFrameBufferManager bufferManager, int[] sortFields,
             INormalizedKeyComputerFactory firstKeyNormalizerFactory, IBinaryComparatorFactory[] comparatorFactories,
@@ -106,10 +106,10 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
 
     //swap tPointerVector[a] and tPointerVector[b]
     private void swap(SerializableVector tPointerVector, int index1, int index2) {
-        tPointerVector.get(index1, tmp_tPtr1);
-        tPointerVector.get(index2, tmp_tPtr2);
-        tPointerVector.set(index1, tmp_tPtr2);
-        tPointerVector.set(index2, tmp_tPtr1);
+        tPointerVector.get(index1, tmpTPtr1);
+        tPointerVector.get(index2, tmpTPtr2);
+        tPointerVector.set(index1, tmpTPtr2);
+        tPointerVector.set(index2, tmpTPtr1);
     }
 
     private void vecswap(SerializableVector tPointerVector, int a, int b, int n) {
@@ -120,22 +120,22 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
 
     //compare tPointerVector[index1], tPointerVector[index2]
     private int compare(SerializableVector tPointerVector, int index1, int index2) throws HyracksDataException{
-        tPointerVector.get(index1, tmp_tPtr1);
-        tPointerVector.get(index2, tmp_tPtr2);
-        int v1 = tmp_tPtr1.id_normal_key;
-        int v2 = tmp_tPtr2.id_normal_key;
+        tPointerVector.get(index1, tmpTPtr1);
+        tPointerVector.get(index2, tmpTPtr2);
+        int v1 = tmpTPtr1.normalKey;
+        int v2 = tmpTPtr2.normalKey;
         if(v1 != v2){
             return ((((long) v1) & 0xffffffffL) < (((long) v2) & 0xffffffffL)) ? -1 : 1;
         }
 
-        int id_frameID1 = tmp_tPtr1.id_frameID;
-        int id_frameID2 = tmp_tPtr2.id_frameID;
+        int frameID1 = tmpTPtr1.frameID;
+        int frameID2 = tmpTPtr2.frameID;
 
-        int id_tuple_start1 = tmp_tPtr1.id_tuple_start;
-        int id_tuple_start2 = tmp_tPtr2.id_tuple_start;
+        int tupleStart1 = tmpTPtr1.tupleStart;
+        int tupleStart2 = tmpTPtr2.tupleStart;
 
-        ByteBuffer buf1 = super.bufferManager.getFrame(id_frameID1);
-        ByteBuffer buf2 = super.bufferManager.getFrame(id_frameID2);
+        ByteBuffer buf1 = super.bufferManager.getFrame(frameID1);
+        ByteBuffer buf2 = super.bufferManager.getFrame(frameID2);
 
         byte[] b1 = buf1.array();
         byte[] b2 = buf2.array();
@@ -143,13 +143,13 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
         fta2.reset(buf2);
         for (int f = 0; f < comparators.length; ++f) {
             int fIdx = sortFields[f];
-            int f1Start = fIdx == 0 ? 0 : buf1.getInt(id_tuple_start1 + (fIdx - 1) * 4);
-            int f1End = buf1.getInt(id_tuple_start1 + fIdx * 4);
-            int s1 = id_tuple_start1 + inputTupleAccessor.getFieldSlotsLength() + f1Start;
+            int f1Start = fIdx == 0 ? 0 : buf1.getInt(tupleStart1 + (fIdx - 1) * 4);
+            int f1End = buf1.getInt(tupleStart1 + fIdx * 4);
+            int s1 = tupleStart1 + inputTupleAccessor.getFieldSlotsLength() + f1Start;
             int l1 = f1End - f1Start;
-            int f2Start = fIdx == 0 ? 0 : buf2.getInt(id_tuple_start2 + (fIdx - 1) * 4);
-            int f2End = buf2.getInt(id_tuple_start2 + fIdx * 4);
-            int s2 = id_tuple_start2 + fta2.getFieldSlotsLength() + f2Start;
+            int f2Start = fIdx == 0 ? 0 : buf2.getInt(tupleStart2 + (fIdx - 1) * 4);
+            int f2End = buf2.getInt(tupleStart2 + fIdx * 4);
+            int s2 = tupleStart2 + fta2.getFieldSlotsLength() + f2Start;
             int l2 = f2End - f2Start;
             int c = comparators[f].compare(b1, s1, l1, b2, s2, l2);
             if (c != 0) {
