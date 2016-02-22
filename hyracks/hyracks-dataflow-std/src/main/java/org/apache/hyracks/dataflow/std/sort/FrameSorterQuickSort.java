@@ -58,7 +58,7 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
 
     void sort(SerializableVector tPointerVector, int offset, int length) throws HyracksDataException {
         int m = offset + (length >> 1);
-
+        System.out.println(tPointerVector.size() + "  " + length);
         int a = offset;
         int b = a;
         int c = offset + length - 1;

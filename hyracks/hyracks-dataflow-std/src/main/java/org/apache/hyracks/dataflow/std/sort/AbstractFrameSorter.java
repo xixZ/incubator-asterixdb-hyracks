@@ -167,6 +167,7 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
     @Override
     public void sort() throws HyracksDataException {
         tupleCount = 0;
+        tPointerVec.clear();
         for (int i = 0; i < bufferManager.getNumFrames(); ++i) {
             inputTupleAccessor
                     .reset(bufferManager.getFrame(i), bufferManager.getFrameStartOffset(i),

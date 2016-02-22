@@ -180,7 +180,7 @@ public class SerializableVectorTest {
         testGetMethodHelper(frameSize, recordSize);
     }
 
-    @Test
+    @Test(expected = IndexOutOfBoundsException.class)
     public void testGetMethodOutOfBound() throws HyracksDataException{
         int recordSize = 8;
         int vSize = 1000000;    //1M
@@ -224,7 +224,7 @@ public class SerializableVectorTest {
 
     }
 
-    @Test
+    @Test(expected = IndexOutOfBoundsException.class)
     public void testSetMethodOutOfBound() throws HyracksDataException{
         int recordSize = 8;
         int vSize = 1000000;    //1M
