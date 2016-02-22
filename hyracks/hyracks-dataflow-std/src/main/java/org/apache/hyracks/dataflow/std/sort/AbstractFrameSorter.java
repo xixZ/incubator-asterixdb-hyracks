@@ -65,7 +65,7 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
    // protected int[] tPointers;
     protected SerializableVector tPointerVec;
     protected int tupleCount;
-
+    private TPointer tmp_TPtr = new TPointer();
     class TPointer implements IResetableSerializable<TPointer>{
         int id_frameID;
         int id_tuple_start;
@@ -85,6 +85,13 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
             id_tuple_start = other.id_tuple_start;
             id_tuple_end = other.id_tuple_end;
             id_normal_key = other.id_normal_key;
+        }
+
+        public void reset(int id_frameID, int id_tuple_start, int id_tuple_end, int id_normal_key){
+            this.id_frameID = id_frameID;
+            this.id_tuple_start = id_tuple_start;
+            this.id_tuple_end = id_tuple_end;
+            this.id_normal_key = id_normal_key;
         }
 
         @Override
@@ -187,8 +194,8 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
                 int f0EndRel = inputTupleAccessor.getFieldEndOffset(j, sfIdx);
                 int f0Start = f0StartRel + tStart + inputTupleAccessor.getFieldSlotsLength();
                 int id_normal_key = nkc == null? 0 : nkc.normalize(array, f0Start, f0EndRel - f0StartRel);
-                TPointer tPointer = new TPointer(i, tStart, tEnd, id_normal_key);
-                tPointerVec.append(tPointer);
+                tmp_TPtr.reset(i, tStart, tEnd, id_normal_key);
+                tPointerVec.append(tmp_TPtr);
                 ++ptr;
             }
         }
@@ -215,12 +222,11 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
         int maxFrameSize = outputFrame.getFrameSize();
         int limit = Math.min(tupleCount, outputLimit);
         int io = 0;
-        TPointer tPointer = new TPointer();
         for (int ptr = 0; ptr < limit; ++ptr) {
-            tPointerVec.get(ptr, tPointer);
-            int i = tPointer.id_frameID;
-            int tStart = tPointer.id_tuple_start;
-            int tEnd = tPointer.id_tuple_end;
+            tPointerVec.get(ptr, tmp_TPtr);
+            int i = tmp_TPtr.id_frameID;
+            int tStart = tmp_TPtr.id_tuple_start;
+            int tEnd = tmp_TPtr.id_tuple_end;
             ByteBuffer buffer = bufferManager.getFrame(i);
             inputTupleAccessor.reset(buffer, bufferManager.getFrameStartOffset(i), bufferManager.getFrameSize(i));
 

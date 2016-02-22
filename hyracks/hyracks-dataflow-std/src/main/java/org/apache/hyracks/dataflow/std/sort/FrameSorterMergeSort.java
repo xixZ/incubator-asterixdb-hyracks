@@ -36,6 +36,10 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
     private SerializableVector tPointerVecTemp;
     private FrameTupleAccessor fta2;
 
+
+    private TPointer tmp_tPtr1 = new TPointer();
+    private TPointer tmp_tPtr2 = new TPointer();
+
     public FrameSorterMergeSort(IHyracksTaskContext ctx, IFrameBufferManager bufferManager, int[] sortFields,
             INormalizedKeyComputerFactory firstKeyNormalizerFactory, IBinaryComparatorFactory[] comparatorFactories,
             RecordDescriptor recordDescriptor) throws HyracksDataException {
@@ -58,8 +62,7 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
             int len = tPointerVec.size();
             tPointerVecTemp.clear();
             for(int i = 0; i < len; i ++){
-                TPointer tPointer = new TPointer();
-                tPointerVecTemp.append(tPointer);
+                tPointerVecTemp.append(tmp_tPtr1);
             }
         }
         sort(0, tupleCount);
@@ -124,53 +127,48 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
     }
 
     private void sVectorCopy(SerializableVector src, int srcPos, SerializableVector dst, int dstPos, int len){
-        TPointer tmp = new TPointer();
         for(int i = 0; i < len; i ++){
-            src.get(srcPos + i, tmp);
-            dst.set(dstPos + i, tmp);
+            src.get(srcPos + i, tmp_tPtr1);
+            dst.set(dstPos + i, tmp_tPtr1);
         }
     }
     //copy tPointerVec[src] to tPointerVecTemp[dest]
     private void copy(int src, int dest) {
-        TPointer tmp = new TPointer();
-        tPointerVec.get(src, tmp);
-        tPointerVecTemp.set(dest, tmp);
+        tPointerVec.get(src, tmp_tPtr1);
+        tPointerVecTemp.set(dest, tmp_tPtr1);
     }
 
-    private int compare(int tp1, int tp2) throws HyracksDataException {
-        TPointer tmp_TPointer1 = new TPointer();
-        TPointer tmp_TPointer2 = new TPointer();
-        tPointerVec.get(tp1, tmp_TPointer1);
-        tPointerVec.get(tp2, tmp_TPointer2);
+    private int compare(int tp1_index, int tp2_index) throws HyracksDataException {
+        tPointerVec.get(tp1_index, tmp_tPtr1);
+        tPointerVec.get(tp2_index, tmp_tPtr2);
 
-        int i1 = tmp_TPointer1.id_frameID;
-        int j1 = tmp_TPointer1.id_tuple_start;
-        int v1 = tmp_TPointer1.id_normal_key;
+        int tp1i = tmp_tPtr1.id_frameID;
+        int tp1j = tmp_tPtr1.id_tuple_start;
+        int tp1v = tmp_tPtr1.id_normal_key;
 
-        int tp2i = tmp_TPointer2.id_frameID;
-        int tp2j = tmp_TPointer2.id_tuple_start;
-        int tp2v = tmp_TPointer2.id_normal_key;
+        int tp2i = tmp_tPtr2.id_frameID;
+        int tp2j = tmp_tPtr2.id_tuple_start;
+        int tp2v = tmp_tPtr2.id_normal_key;
 
-        if (v1 != tp2v) {
-            return ((((long) v1) & 0xffffffffL) < (((long) tp2v) & 0xffffffffL)) ? -1 : 1;
+        if (tp1v != tp2v) {
+            return ((((long) tp1v) & 0xffffffffL) < (((long) tp2v) & 0xffffffffL)) ? -1 : 1;
         }
-        int i2 = tp2i;
-        int j2 = tp2j;
-        ByteBuffer buf1 = super.bufferManager.getFrame(i1);
-        ByteBuffer buf2 = super.bufferManager.getFrame(i2);
+
+        ByteBuffer buf1 = super.bufferManager.getFrame(tp1i);
+        ByteBuffer buf2 = super.bufferManager.getFrame(tp2i);
         byte[] b1 = buf1.array();
         byte[] b2 = buf2.array();
         inputTupleAccessor.reset(buf1);
         fta2.reset(buf2);
         for (int f = 0; f < comparators.length; ++f) {
             int fIdx = sortFields[f];
-            int f1Start = fIdx == 0 ? 0 : IntSerDeUtils.getInt(b1, j1 + (fIdx - 1) * 4);
-            int f1End = IntSerDeUtils.getInt(b1, j1 + fIdx * 4);
-            int s1 = j1 + inputTupleAccessor.getFieldSlotsLength() + f1Start;
+            int f1Start = fIdx == 0 ? 0 : IntSerDeUtils.getInt(b1, tp1j + (fIdx - 1) * 4);
+            int f1End = IntSerDeUtils.getInt(b1, tp1j + fIdx * 4);
+            int s1 = tp1j + inputTupleAccessor.getFieldSlotsLength() + f1Start;
             int l1 = f1End - f1Start;
-            int f2Start = fIdx == 0 ? 0 : IntSerDeUtils.getInt(b2, j2 + (fIdx - 1) * 4);
-            int f2End = IntSerDeUtils.getInt(b2, j2 + fIdx * 4);
-            int s2 = j2 + fta2.getFieldSlotsLength() + f2Start;
+            int f2Start = fIdx == 0 ? 0 : IntSerDeUtils.getInt(b2, tp2j + (fIdx - 1) * 4);
+            int f2End = IntSerDeUtils.getInt(b2, tp2j + fIdx * 4);
+            int s2 = tp2j + fta2.getFieldSlotsLength() + f2Start;
             int l2 = f2End - f2Start;
             int c = comparators[f].compare(b1, s1, l1, b2, s2, l2);
             if (c != 0) {

@@ -33,6 +33,9 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
 
     private FrameTupleAccessor fta2;
 
+    private TPointer tmp_tPtr1 = new TPointer();
+    private TPointer tmp_tPtr2 = new TPointer();
+
     public FrameSorterQuickSort(IHyracksTaskContext ctx, IFrameBufferManager bufferManager, int[] sortFields,
             INormalizedKeyComputerFactory firstKeyNormalizerFactory, IBinaryComparatorFactory[] comparatorFactories,
             RecordDescriptor recordDescriptor) throws HyracksDataException {
@@ -103,12 +106,10 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
 
     //swap tPointerVector[a] and tPointerVector[b]
     private void swap(SerializableVector tPointerVector, int index1, int index2) {
-        TPointer tmp1 = new TPointer();
-        TPointer tmp2 = new TPointer();
-        tPointerVector.get(index1, tmp1);
-        tPointerVector.get(index2, tmp2);
-        tPointerVector.set(index1, tmp2);
-        tPointerVector.set(index2, tmp1);
+        tPointerVector.get(index1, tmp_tPtr1);
+        tPointerVector.get(index2, tmp_tPtr2);
+        tPointerVector.set(index1, tmp_tPtr2);
+        tPointerVector.set(index2, tmp_tPtr1);
     }
 
     private void vecswap(SerializableVector tPointerVector, int a, int b, int n) {
@@ -119,21 +120,19 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
 
     //compare tPointerVector[index1], tPointerVector[index2]
     private int compare(SerializableVector tPointerVector, int index1, int index2) throws HyracksDataException{
-        TPointer tPointer1 = new TPointer();
-        TPointer tPointer2 = new TPointer();
-        tPointerVector.get(index1, tPointer1);
-        tPointerVector.get(index2, tPointer2);
-        int v1 = tPointer1.id_normal_key;
-        int v2 = tPointer2.id_normal_key;
+        tPointerVector.get(index1, tmp_tPtr1);
+        tPointerVector.get(index2, tmp_tPtr2);
+        int v1 = tmp_tPtr1.id_normal_key;
+        int v2 = tmp_tPtr2.id_normal_key;
         if(v1 != v2){
             return ((((long) v1) & 0xffffffffL) < (((long) v2) & 0xffffffffL)) ? -1 : 1;
         }
 
-        int id_frameID1 = tPointer1.id_frameID;
-        int id_frameID2 = tPointer2.id_frameID;
+        int id_frameID1 = tmp_tPtr1.id_frameID;
+        int id_frameID2 = tmp_tPtr2.id_frameID;
 
-        int id_tuple_start1 = tPointer1.id_tuple_start;
-        int id_tuple_start2 = tPointer2.id_tuple_start;
+        int id_tuple_start1 = tmp_tPtr1.id_tuple_start;
+        int id_tuple_start2 = tmp_tPtr2.id_tuple_start;
 
         ByteBuffer buf1 = super.bufferManager.getFrame(id_frameID1);
         ByteBuffer buf2 = super.bufferManager.getFrame(id_frameID2);
