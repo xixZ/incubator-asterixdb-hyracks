@@ -17,9 +17,7 @@
  * under the License.
  */
 
-
 package org.apache.hyracks.dataflow.std.structures;
-
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -28,7 +26,7 @@ import org.apache.hyracks.api.context.IHyracksFrameMgrContext;
 import org.apache.hyracks.api.context.IHyracksTaskContext;
 import org.apache.hyracks.api.exceptions.HyracksDataException;
 
-public class SerializableVector implements ISerializableVector<IResetableSerializable>{
+public class SerializableVector implements ISerializableVector<IResetableSerializable> {
 
     private final int frameSize;
     private final int recordPerFrame;
@@ -36,14 +34,15 @@ public class SerializableVector implements ISerializableVector<IResetableSeriali
     private ArrayList<ByteBuffer> frames;
     private int recordSize;
     private int numOfRecords;
-    private int lastPos;    //last position in the last frame
+    private int lastPos; //last position in the last frame
 
     /**
      * constructor
      * default frameSize is the same as system setting
+     * 
      * @param recordSize
      */
-    public SerializableVector(IHyracksFrameMgrContext ctx, int recordSize){
+    public SerializableVector(IHyracksFrameMgrContext ctx, int recordSize) {
         frames = new ArrayList<>();
         this.frameSize = ctx.getInitialFrameSize();
         this.recordSize = recordSize;
@@ -55,7 +54,7 @@ public class SerializableVector implements ISerializableVector<IResetableSeriali
 
     @Override
     public void get(int index, IResetableSerializable record) {
-        if(index >= numOfRecords) {
+        if (index >= numOfRecords) {
             throw new IndexOutOfBoundsException("index: " + index + " current vector size: " + numOfRecords);
         }
         int frameIdx = getFrameIdx(index);
@@ -65,24 +64,22 @@ public class SerializableVector implements ISerializableVector<IResetableSeriali
 
     @Override
     public void append(IResetableSerializable record) throws HyracksDataException {
-        if(numOfRecords % recordPerFrame == 0){    //add a new frame
+        if (numOfRecords % recordPerFrame == 0) { //add a new frame
             ByteBuffer frame = ctx.allocateFrame(frameSize);
             record.serialize(frame.array(), 0);
             frames.add(frame);
             lastPos = recordSize;
-        }
-        else{
+        } else {
             int frameIdx = frames.size() - 1;
             record.serialize(frames.get(frameIdx).array(), lastPos);
             lastPos += recordSize;
         }
-        numOfRecords ++;
+        numOfRecords++;
     }
-
 
     @Override
     public void set(int index, IResetableSerializable record) {
-        if(index >= numOfRecords){
+        if (index >= numOfRecords) {
             throw new IndexOutOfBoundsException("index: " + index + " current vector size: " + numOfRecords);
         }
         int frameIdx = getFrameIdx(index);
@@ -107,10 +104,20 @@ public class SerializableVector implements ISerializableVector<IResetableSeriali
         return frames.size();
     }
 
-    private int getFrameIdx(int index){
+    public static void sVectorCopy(SerializableVector src, int srcPos, SerializableVector dst, int dstPos, int len,
+            IResetableSerializable tmpRecord) {
+
+        for (int i = 0; i < len; i++) {
+            src.get(srcPos + i, tmpRecord);
+            dst.set(dstPos + i, tmpRecord);
+        }
+    }
+
+    private int getFrameIdx(int index) {
         return index / recordPerFrame;
     }
-    private int getOffsetInFrame(int index){
+
+    private int getOffsetInFrame(int index) {
         return (index % recordPerFrame) * recordSize;
     }
 }

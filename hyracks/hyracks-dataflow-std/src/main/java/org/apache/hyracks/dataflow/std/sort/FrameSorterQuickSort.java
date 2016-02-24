@@ -57,68 +57,24 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
     }
 
     void sort(SerializableVector tPointerVector, int offset, int length) throws HyracksDataException {
-        if(length <= 1)
+        if (length <= 1) {
             return;
+        }
         int left = offset + 1, right = offset + length - 1;
-        while(left <= right){
+        while (left <= right) {
             int cmp = compare(tPointerVector, left, offset);
-            if(cmp > 0){
+            if (cmp > 0) {
                 swap(tPointerVector, left, right);
-                right --;
+                right--;
+            } else {
+                left++;
             }
-            else
-                left ++;
         }
         swap(tPointerVector, offset, right);
         sort(tPointerVector, offset, right - offset);
-        sort(tPointerVector, right + 1, length - 1  - (right - offset));
-        /**
-        int a = offset;
-        int b = a;
-        int c = offset + length - 1;
-        int d = c;
-        while (true) {
-            while (b <= c) {
-                int cmp = compare(tPointerVector, b, m);
-                if (cmp > 0) {
-                    break;
-                }
-                if (cmp == 0) {
-                    swap(tPointerVector, a++, b);
-                }
-                ++b;
-            }
-            while (c >= b) {
-                int cmp = compare(tPointerVector, c, m);
-                if (cmp < 0) {
-                    break;
-                }
-                if (cmp == 0) {
-                    swap(tPointerVector, c, d--);
-                }
-                --c;
-            }
-            if (b > c)
-                break;
-            swap(tPointerVector, b++, c--);
-        }
-
-        int s;
-        int n = offset + length;
-        s = Math.min(a - offset, b - a);
-        vecswap(tPointerVector, offset, b - s, s);
-        s = Math.min(d - c, n - d - 1);
-        vecswap(tPointerVector, b, n - s, s);
-
-        if ((s = b - a) > 1) {
-            sort(tPointerVector, offset, s);
-        }
-        if ((s = d - c) > 1) {
-            sort(tPointerVector, n - s, s);
-        }*/
+        sort(tPointerVector, right + 1, length - 1 - (right - offset));
     }
 
-    //swap tPointerVector[a] and tPointerVector[b]
     private void swap(SerializableVector tPointerVector, int index1, int index2) {
         tPointerVector.get(index1, tmpTPtr1);
         tPointerVector.get(index2, tmpTPtr2);
@@ -126,19 +82,12 @@ public class FrameSorterQuickSort extends AbstractFrameSorter {
         tPointerVector.set(index2, tmpTPtr1);
     }
 
-    private void vecswap(SerializableVector tPointerVector, int a, int b, int n) {
-        for (int i = 0; i < n; i++, a++, b++) {
-            swap(tPointerVector, a, b);
-        }
-    }
-
-    //compare tPointerVector[index1], tPointerVector[index2]
-    private int compare(SerializableVector tPointerVector, int index1, int index2) throws HyracksDataException{
+    private int compare(SerializableVector tPointerVector, int index1, int index2) throws HyracksDataException {
         tPointerVector.get(index1, tmpTPtr1);
         tPointerVector.get(index2, tmpTPtr2);
         int v1 = tmpTPtr1.normalKey;
         int v2 = tmpTPtr2.normalKey;
-        if(v1 != v2){
+        if (v1 != v2) {
             return ((((long) v1) & 0xffffffffL) < (((long) v2) & 0xffffffffL)) ? -1 : 1;
         }
 

@@ -54,8 +54,8 @@ import org.junit.Test;
 
 public abstract class AbstractRunGeneratorTest {
     static TestUtils testUtils = new TestUtils();
-    static ISerializerDeserializer[] SerDers = new ISerializerDeserializer[] {
-            IntegerSerializerDeserializer.INSTANCE, new UTF8StringSerializerDeserializer() };
+    static ISerializerDeserializer[] SerDers = new ISerializerDeserializer[] { IntegerSerializerDeserializer.INSTANCE,
+            new UTF8StringSerializerDeserializer() };
     static RecordDescriptor RecordDesc = new RecordDescriptor(SerDers);
     static Random GRandom = new Random(System.currentTimeMillis());
     static int[] SortFields = new int[] { 0, 1 };
@@ -72,8 +72,8 @@ public abstract class AbstractRunGeneratorTest {
     abstract AbstractSortRunGenerator getSortRunGenerator(IHyracksTaskContext ctx, int frameLimit, int numOfInputRecord)
             throws HyracksDataException;
 
-    protected List<RunAndMaxFrameSizePair> testSortRecords(int pageSize, int frameLimit, int numRuns,
-            int minRecordSize, int maxRecordSize, HashMap<Integer, String> specialData) throws HyracksDataException {
+    protected List<RunAndMaxFrameSizePair> testSortRecords(int pageSize, int frameLimit, int numRuns, int minRecordSize,
+            int maxRecordSize, HashMap<Integer, String> specialData) throws HyracksDataException {
         IHyracksTaskContext ctx = testUtils.create(pageSize);
 
         HashMap<Integer, String> keyValuePair = new HashMap<>();
@@ -143,7 +143,7 @@ public abstract class AbstractRunGeneratorTest {
 
     static void prepareData(IHyracksTaskContext ctx, List<IFrame> frameList, int minDataSize, int minRecordSize,
             int maxRecordSize, Map<Integer, String> specialData, Map<Integer, String> keyValuePair)
-            throws HyracksDataException {
+                    throws HyracksDataException {
 
         ArrayTupleBuilder tb = new ArrayTupleBuilder(RecordDesc.getFieldCount());
         FrameTupleAppender appender = new FrameTupleAppender();
@@ -235,8 +235,8 @@ public abstract class AbstractRunGeneratorTest {
         int numRuns = 2;
         int minRecordSize = pageSize;
         int maxRecordSize = (int) (pageSize * 1.8);
-        List<RunAndMaxFrameSizePair> size = testSortRecords(pageSize, frameLimit, numRuns, minRecordSize,
-                maxRecordSize, null);
+        List<RunAndMaxFrameSizePair> size = testSortRecords(pageSize, frameLimit, numRuns, minRecordSize, maxRecordSize,
+                null);
         assertMaxFrameSizesAreAllEqualsTo(size, pageSize * 2);
     }
 
@@ -248,8 +248,8 @@ public abstract class AbstractRunGeneratorTest {
         int minRecordSize = 20;
         int maxRecordSize = pageSize / 2;
         HashMap<Integer, String> specialPair = generateBigObject(pageSize, frameLimit - 1);
-        List<RunAndMaxFrameSizePair> size = testSortRecords(pageSize, frameLimit, numRuns, minRecordSize,
-                maxRecordSize, specialPair);
+        List<RunAndMaxFrameSizePair> size = testSortRecords(pageSize, frameLimit, numRuns, minRecordSize, maxRecordSize,
+                specialPair);
 
         int max = 0;
         for (RunAndMaxFrameSizePair run : size) {
@@ -266,8 +266,8 @@ public abstract class AbstractRunGeneratorTest {
         HashMap<Integer, String> specialPair = generateBigObject(pageSize, frameLimit);
         int minRecordSize = 10;
         int maxRecordSize = pageSize / 2;
-        List<RunAndMaxFrameSizePair> size = testSortRecords(pageSize, frameLimit, numRuns, minRecordSize,
-                maxRecordSize, specialPair);
+        List<RunAndMaxFrameSizePair> size = testSortRecords(pageSize, frameLimit, numRuns, minRecordSize, maxRecordSize,
+                specialPair);
 
     }
 }

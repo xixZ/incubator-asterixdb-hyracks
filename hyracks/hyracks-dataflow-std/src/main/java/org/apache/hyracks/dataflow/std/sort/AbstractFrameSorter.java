@@ -57,7 +57,6 @@ public abstract class AbstractFrameSorter implements IFrameSorter {
     protected final IFrame outputFrame;
     protected final int outputLimit;
 
-   // protected int[] tPointers;
     protected SerializableVector tPointerVec;
     protected int tupleCount;
     protected TPointer tmpTPtr = new TPointer();

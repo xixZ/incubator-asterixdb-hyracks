@@ -32,7 +32,6 @@ import org.apache.hyracks.dataflow.std.structures.SerializableVector;
 
 public class FrameSorterMergeSort extends AbstractFrameSorter {
 
-    //private int[] tPointersTemp;
     private SerializableVector tPointerVecTemp;
     private FrameTupleAccessor fta2;
 
@@ -58,7 +57,7 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
 
     @Override
     void sortTupleReferences() throws HyracksDataException {
-        if(tPointerVecTemp.size() < tPointerVec.size()){
+        if (tPointerVecTemp.size() < tPointerVec.size()) {
             int len = tPointerVec.size();
             tPointerVecTemp.clear();
             for(int i = 0; i < len; i ++){
@@ -85,7 +84,7 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
                 if (next < end) {
                     merge(i, next, step, Math.min(step, end - next));
                 } else {
-                    sVectorCopy(tPointerVec, i, tPointerVecTemp, i, (end - i));
+                    SerializableVector.sVectorCopy(tPointerVec, i, tPointerVecTemp, i, (end - i), tmpTPtr);
                 }
             }
             /** prepare next phase merge */
@@ -118,20 +117,14 @@ public class FrameSorterMergeSort extends AbstractFrameSorter {
         }
         if (pos1 <= end1) {
             int rest = end1 - pos1 + 1;
-            sVectorCopy(tPointerVec, pos1, tPointerVecTemp, targetPos, rest);
+            SerializableVector.sVectorCopy(tPointerVec, pos1, tPointerVecTemp, targetPos, rest, tmpTPtr);
         }
         if (pos2 <= end2) {
             int rest = end2 - pos2 + 1;
-            sVectorCopy(tPointerVec, pos2, tPointerVecTemp, targetPos, rest);
+            SerializableVector.sVectorCopy(tPointerVec, pos2, tPointerVecTemp, targetPos, rest, tmpTPtr);
         }
     }
 
-    private void sVectorCopy(SerializableVector src, int srcPos, SerializableVector dst, int dstPos, int len){
-        for(int i = 0; i < len; i ++){
-            src.get(srcPos + i, tmpTPtr1);
-            dst.set(dstPos + i, tmpTPtr1);
-        }
-    }
     //copy tPointerVec[src] to tPointerVecTemp[dest]
     private void copy(int src, int dest) {
         tPointerVec.get(src, tmpTPtr);
